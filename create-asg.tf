@@ -16,6 +16,12 @@ resource "aws_security_group" "instance_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+resource "aws_lb_target_group" "test" {
+  name     = "tf-example-lb-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.vpc.id
+}  
  
 resource"aws_launch_configuration" "launch-configuration" {
   name = var.launch_configuration_name
@@ -42,10 +48,15 @@ resource "aws_autoscaling_group" "autoscalling_group_config" {
   desired_capacity = 3
   force_delete = true
   vpc_zone_identifier = [aws_subnet.subnet4.id]
-  load_balancers = ["${aws_alb.autoscalling_group_alb.name}"]
+  target_group_arns = ["aws_lb_target_group.test.arn"]
   launch_configuration = aws_launch_configuration.launch-configuration.name
  
   lifecycle {
     create_before_destroy = true
   }
+}
+
+resource "aws_autoscaling_attachment" "asg_attachment_bar" {
+  autoscaling_group_name = aws_autoscaling_group.autoscalling_group_config.id
+  alb_target_group_arn   = aws_lb_target_group.test.arn
 }
